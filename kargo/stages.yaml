@@ -1,0 +1,158 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: dev
+  namespace: kargo-guestbook
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: base
+    sources:
+      direct: true
+  promotionTemplate:
+    spec:
+      vars:
+      - name: gitRepo
+        value: https://github.com/<repo>
+      steps:
+      - uses: git-clone
+        config:
+          checkout:
+          - commit: ${{ commitFrom(vars.gitRepo, warehouse("base")).ID }}
+            path: ./src
+          - branch: main
+            path: ./out
+          repoURL: ${{ vars.gitRepo }}
+
+
+      - uses: copy
+        config:
+          inPath: ./src/base/values.yaml
+          outPath: ./out/guestbook/values-dev.yaml
+
+      # Commit the changes to the Git repository.
+      - uses: git-commit
+        as: commit
+        config:
+          path: ./out
+          message: update values file
+
+      # Push the changes to the Git repository.
+      - uses: git-push
+        config:
+          path: ./out
+
+      - uses: argocd-update
+        config:
+          apps:
+          - name: guestbook-dev
+            sources:
+            - repoURL: https://github.com/<repo>
+              desiredRevision: ${{ outputs.commit.commit }}
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: stg
+  namespace: kargo-guestbook
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: base
+    sources:
+      stages:
+      - dev
+  promotionTemplate:
+    spec:
+      vars:
+      - name: gitRepo
+        value: https://github.com/<repo>
+      steps:
+      - uses: git-clone
+        config:
+          checkout:
+          - commit: ${{ commitFrom(vars.gitRepo, warehouse("base")).ID }}
+            path: ./src
+          - branch: main
+            path: ./out
+          repoURL: ${{ vars.gitRepo }}
+
+      - uses: copy
+        config:
+          inPath: ./src/base/values.yaml
+          outPath: ./out/guestbook/values-stg.yaml
+
+      # Commit the changes to the Git repository.
+      - uses: git-commit
+        as: commit
+        config:
+          path: ./out
+          message: update values file
+
+      # Push the changes to the Git repository.
+      - uses: git-push
+        config:
+          path: ./out
+
+      - uses: argocd-update
+        config:
+          apps:
+          - name: guestbook-stg
+            sources:
+            - repoURL: https://github.com/<repo>
+              desiredRevision: ${{ outputs.commit.commit }}
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: prd
+  namespace: kargo-guestbook
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: base
+    sources:
+      stages:
+      - stg
+  promotionTemplate:
+    spec:
+      vars:
+      - name: gitRepo
+        value: https://github.com/<repo>
+      steps:
+      - uses: git-clone
+        config:
+          checkout:
+          - commit: ${{ commitFrom(vars.gitRepo, warehouse("base")).ID }}
+            path: ./src
+          - branch: main
+            path: ./out
+          repoURL: ${{ vars.gitRepo }}
+
+      - uses: copy
+        config:
+          inPath: ./src/base/values.yaml
+          outPath: ./out/guestbook/values-prd.yaml
+
+      # Commit the changes to the Git repository.
+      - uses: git-commit
+        as: commit
+        config:
+          path: ./out
+          message: update values file
+
+      # Push the changes to the Git repository.
+      - uses: git-push
+        config:
+          path: ./out
+
+      - uses: argocd-update
+        config:
+          apps:
+          - name: guestbook-prd
+            sources:
+            - repoURL: https://github.com/<repo>
+              desiredRevision: ${{ outputs.commit.commit }}

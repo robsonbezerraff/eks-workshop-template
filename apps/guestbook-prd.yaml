@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: guestbook-prd
+  namespace: argocd
+  annotations:
+    kargo.akuity.io/authorized-stage: kargo-guestbook:prd
+spec:
+  project: demo
+  source:
+    repoURL: 'https://github.com/<repo>'
+    path: guestbook
+    targetRevision: HEAD
+    helm:
+      valueFiles:
+        - values-prd.yaml
+  destination:
+    namespace: guestbook-prd
+    name: eks-cluster
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true

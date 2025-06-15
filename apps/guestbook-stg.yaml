@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: guestbook-stg
+  namespace: argocd
+  annotations:
+    kargo.akuity.io/authorized-stage: kargo-guestbook:stg
+spec:
+  project: demo
+  source:
+    repoURL: 'https://github.com/<repo>'
+    path: guestbook
+    targetRevision: HEAD
+    helm:
+      valueFiles:
+        - values-stg.yaml
+  destination:
+    namespace: guestbook-stg
+    name: eks-cluster
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
